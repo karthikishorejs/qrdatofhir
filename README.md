@@ -1,24 +1,40 @@
-# README
+# QRDA to FHIR (QI-Core) Converter
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+This Ruby-based tool parses QRDA Category I XML files and converts them into FHIR R4 JSON resources (Patient, Encounter, MedicationAdministration) conforming to [QI-Core](http://hl7.org/fhir/us/qicore/index.html) profiles.
 
-Things you may want to cover:
+### ✅ Features
 
-* Ruby version
+- Parses QRDA Category I XML (HL7 CDA)
+- Extracts demographic and clinical data
+- Builds:
+  - `Patient` (with race, ethnicity, language)
+  - `Encounter`
+  - `MedicationAdministration`
+- Outputs three separate FHIR JSON files per input XML
+- Supports local ZIP uploads and AWS S3 input/output
+- Compatible with AWS Lambda (writes to `/tmp`, S3 optional)
 
-* System dependencies
+---
 
-* Configuration
+## 🚀 Setup
 
-* Database creation
+### 1. Clone and Install
 
-* Database initialization
+```bash
+git clone https://github.com/karthikishorejs/qrdatofhir.git
+cd qrdatofhir
+bundle install
+```
 
-* How to run the test suite
+### 2. Start the Rails Server
+``` rails server ```
 
-* Services (job queues, cache servers, search engines, etc.)
+## 🧪 Example API Usage
+```curl -F "file=@Patients.zip" http://localhost:3000/convert```
+You'll get ```{ "status": "success" }``` and files will be saved under output/
 
-* Deployment instructions
+### 🧪 Testing with RSpec
+```bundle exec rspec```
 
-* ...
+👨‍💻 Author
+Built with ❤️ by @karthikishorejs
