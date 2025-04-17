@@ -7,7 +7,7 @@ This Ruby-based tool parses QRDA Category I XML files and converts them into FHI
 - Parses QRDA Category I XML (HL7 CDA)
 - Extracts demographic and clinical data
 - Builds:
-  - `Patient` (with race, ethnicity, language)
+  - `Patient` (with gender, birthdate, race, ethnicity, name)
   - `Encounter`
   - `MedicationAdministration`
 - Outputs three separate FHIR JSON files per input XML

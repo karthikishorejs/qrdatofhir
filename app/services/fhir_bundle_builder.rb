@@ -1,5 +1,5 @@
-require 'fhir_models'
-require 'securerandom'
+require "fhir_models"
+require "securerandom"
 
 class FhirBundleBuilder
   def self.build_patient(data)
@@ -8,9 +8,9 @@ class FhirBundleBuilder
       active: true,
       gender: data[:gender],
       birthDate: format_birth_date(data[:birth_date]),
-      name: [build_name(data[:name])],
+      name: [ build_name(data[:name]) ],
       meta: {
-        profile: ['http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-patient']
+        profile: [ "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-patient" ]
       },
       extension: build_extensions(data)
     )
@@ -18,27 +18,39 @@ class FhirBundleBuilder
     patient
   end
 
-  def self.build_encounter(patient_id)
+  def self.build_encounter(encounter_data, patient_id)
     FHIR::Encounter.new(
-      id: SecureRandom.uuid,
-      status: 'finished',
+      id: encounter_data[:encounter_id] || SecureRandom.uuid,
+      status: encounter_data[:status_code] || "unknown",
       subject: { reference: "Patient/#{patient_id}" },
-      period: build_encounter_period,
+      period: build_encounter_period(encounter_data[:low_time], encounter_data[:high_time]),
       meta: {
-        profile: ['http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-encounter']
-      }
+        profile: [ "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-encounter" ]
+      },
+      type: encounter_data[:code][:code] ? [
+        {
+          coding: [
+            {
+              system: map_code_system(encounter_data[:code][:code_system]),
+              code: encounter_data[:code][:code],
+              display: encounter_data[:code][:code_system_name]
+            }
+          ]
+        }
+      ] : [],
+      class: map_encounter_class(encounter_data[:code][:code]) || nil,
     )
   end
 
   def self.build_medication(patient_id)
     FHIR::MedicationAdministration.new(
       id: SecureRandom.uuid,
-      status: 'completed',
+      status: "completed",
       subject: { reference: "Patient/#{patient_id}" },
       effectivePeriod: build_medication_period,
       medicationCodeableConcept: build_medication_codeable_concept,
       meta: {
-        profile: ['http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-medicationadministration']
+        profile: [ "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-medicationadministration" ]
       }
     )
   end
@@ -54,18 +66,18 @@ class FhirBundleBuilder
 
   def self.build_race_extension(race)
     FHIR::Extension.new(
-      url: 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-race',
+      url: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race",
       extension: [
         {
-          url: 'ombCategory',
+          url: "ombCategory",
           valueCoding: {
-            system: 'urn:oid:2.16.840.1.113883.6.238',
+            system: "urn:oid:2.16.840.1.113883.6.238",
             code: race[:code],
             display: race[:display]
           }
         },
         {
-          url: 'text',
+          url: "text",
           valueString: race[:display]
         }
       ]
@@ -74,18 +86,18 @@ class FhirBundleBuilder
 
   def self.build_ethnicity_extension(ethnicity)
     FHIR::Extension.new(
-      url: 'http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity',
+      url: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity",
       extension: [
         {
-          url: 'ombCategory',
+          url: "ombCategory",
           valueCoding: {
-            system: 'urn:oid:2.16.840.1.113883.6.238',
+            system: "urn:oid:2.16.840.1.113883.6.238",
             code: ethnicity[:code],
             display: ethnicity[:display]
           }
         },
         {
-          url: 'text',
+          url: "text",
           valueString: ethnicity[:display]
         }
       ]
@@ -94,16 +106,16 @@ class FhirBundleBuilder
 
   def self.build_name(name)
     {
-      use: 'usual',
-      given: [name[:given]],
+      use: "usual",
+      given: [ name[:given] ],
       family: name[:family]
     }
   end
 
-  def self.build_encounter_period
+  def self.build_encounter_period(low_time, high_time)
     {
-      start: "2026-04-07T09:00:00Z",
-      end: "2026-04-10T08:15:00Z"
+      start: low_time ? Time.strptime(low_time, "%Y%m%d%H%M%S").utc.iso8601 : nil,
+      end: high_time ? Time.strptime(high_time, "%Y%m%d%H%M%S").utc.iso8601 : nil
     }
   end
 
@@ -116,15 +128,50 @@ class FhirBundleBuilder
 
   def self.build_medication_codeable_concept
     {
-      coding: [{
+      coding: [ {
         system: "http://www.nlm.nih.gov/research/umls/rxnorm",
         code: "1010600"
-      }]
+      } ]
     }
   end
 
   def self.format_birth_date(birth)
     return unless birth
     "#{birth[0..3]}-#{birth[4..5]}-#{birth[6..7]}"
+  end
+
+  def self.map_code_system(code_system)
+    case code_system
+    when "2.16.840.1.113883.6.96"
+      "http://snomed.info/sct"
+    when "2.16.840.1.113883.6.1"
+      "http://loinc.org"
+    when "2.16.840.1.113883.6.88"
+      "http://www.nlm.nih.gov/research/umls/rxnorm"
+    else
+      code_system # Default to the original value if no mapping exists
+    end
+  end
+
+  def self.map_encounter_class(code)
+    case code
+    # Encounter, Performed: Encounter Inpatient 2.16.840.1.113883.3.666.5.307
+    # Encounter, Performed: Observation Services 2.16.840.1.113762.1.4.1111.143
+    when "183452005", "32485007", "8715000", "448951000124107"
+      FHIR::Coding.new(
+        system: "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        code: "IMP",
+        display: "inpatient encounter"
+      )
+    # Encounter, Performed: Emergency Department Visit 2.16.840.1.113883.3.117.1.7.1.292
+    when "4525004"
+      FHIR::Coding.new(
+        system: "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        code: "EMER",
+        display: "emergency"
+      )
+    when
+      nil
+    end
   end
 end

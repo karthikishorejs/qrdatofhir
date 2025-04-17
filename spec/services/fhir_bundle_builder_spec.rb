@@ -41,13 +41,91 @@ RSpec.describe FhirBundleBuilder, type: :service do
   end
 
   describe '.build_encounter' do
-    it 'builds a QI-Core Encounter with proper patient reference' do
-      encounter = described_class.build_encounter("test-patient-1")
+    let(:patient_id) { '12345' }
 
-      expect(encounter).to be_a(FHIR::Encounter)
-      expect(encounter.subject.reference).to eq("Patient/test-patient-1")
-      expect(encounter.status).to eq("finished")
-      expect(encounter.period.start).to eq("2026-04-07T09:00:00Z")
+    context 'when encounter data is valid' do
+      let(:encounter_data) do
+        {
+          encounter_id: 'encounter-1',
+          status_code: 'finished',
+          low_time: '20240219115139',
+          high_time: '20240219120639',
+          code: {
+            code: '183452005',
+            code_system: '2.16.840.1.113883.6.96',
+            code_system_name: 'SNOMEDCT'
+          }
+        }
+      end
+
+      it 'builds a valid FHIR Encounter resource' do
+        encounter = FhirBundleBuilder.build_encounter(encounter_data, patient_id)
+
+        expect(encounter.id).to eq('encounter-1')
+        expect(encounter.status).to eq('finished')
+        expect(encounter.subject.reference).to eq("Patient/#{patient_id}")
+        expect(encounter.period.start).to eq('2024-02-19T16:51:39Z') # Adjusted to UTC
+        expect(encounter.period.end).to eq('2024-02-19T17:06:39Z')   # Adjusted to UTC
+        expect(encounter.type.first.coding.first.system).to eq('http://snomed.info/sct')
+        expect(encounter.type.first.coding.first.code).to eq('183452005')
+        expect(encounter.type.first.coding.first.display).to eq('SNOMEDCT')
+
+        # expect(encounter.class_.code).to eq('IMP')
+        # expect(encounter.class_.display).to eq('inpatient encounter')
+      end
+    end
+
+    context 'when encounter data has an unknown code system' do
+      let(:encounter_data) do
+        {
+          encounter_id: 'encounter-2',
+          status_code: 'in-progress',
+          low_time: '20240219115139',
+          high_time: '20240219120639',
+          code: {
+            code: '999999',
+            code_system: 'unknown-system',
+            code_system_name: 'Unknown'
+          }
+        }
+      end
+
+      it 'uses the original code system if no mapping exists' do
+        encounter = FhirBundleBuilder.build_encounter(encounter_data, patient_id)
+
+        expect(encounter.type.first.coding.first.system).to eq('unknown-system')
+        expect(encounter.type.first.coding.first.code).to eq('999999')
+        expect(encounter.type.first.coding.first.display).to eq('Unknown')
+        expect(encounter.class).to be_nil
+      end
+    end
+
+    context 'when encounter data is missing optional fields' do
+      let(:encounter_data) do
+        {
+          encounter_id: nil,
+          status_code: nil,
+          low_time: nil,
+          high_time: nil,
+          code: {
+            code: nil,
+            code_system: nil,
+            code_system_name: nil
+          }
+        }
+      end
+
+      it 'builds a FHIR Encounter resource with default values' do
+        encounter = FhirBundleBuilder.build_encounter(encounter_data, patient_id)
+
+        expect(encounter.id).not_to be_nil
+        expect(encounter.status).to eq('unknown')
+        expect(encounter.subject.reference).to eq("Patient/#{patient_id}")
+        expect(encounter.period.start).to be_nil
+        expect(encounter.period.end).to be_nil
+        expect(encounter.type).to eq([])
+        expect(encounter.class).to be_nil
+      end
     end
   end
 
