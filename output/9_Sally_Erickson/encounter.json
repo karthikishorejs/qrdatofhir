@@ -1,0 +1,17 @@
+{
+  "id": "3ccdb0af-9540-447c-9007-9b463e98ab3a",
+  "meta": {
+    "profile": [
+      "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-encounter"
+    ]
+  },
+  "status": "finished",
+  "subject": {
+    "reference": "Patient/66904dae1d41c802aa92399e"
+  },
+  "period": {
+    "start": "2026-04-07T09:00:00Z",
+    "end": "2026-04-10T08:15:00Z"
+  },
+  "resourceType": "Encounter"
+}
