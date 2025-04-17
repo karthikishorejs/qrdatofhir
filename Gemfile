@@ -15,7 +15,7 @@ gem "jbuilder"
 gem 'nokogiri', '>= 1.13.5'
 
 # Fhir models
-gem 'fhir_models', '~> 4.0.0'
+gem 'fhir_models', '~> 5.0.0'
 
 gem 'rubyzip', '~> 2.3'
 
