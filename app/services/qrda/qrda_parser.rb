@@ -37,6 +37,22 @@ class QrdaParser
     }
   end
 
+  def extract_medication
+    medication_node = doc.at_xpath("//hl7:entry/hl7:substanceAdministration", ns)
+    return nil unless medication_node
+    {
+      medication_id: medication_node.at_xpath("hl7:consumable/hl7:manufacturedProduct/hl7:code", ns)&.[]("code"),
+      low_time: medication_node.at_xpath("hl7:effectiveTime/hl7:low", ns)&.[]("value"),
+      high_time: medication_node.at_xpath("hl7:effectiveTime/hl7:high", ns)&.[]("value"),
+      status_code: extract_encounter_status_code(medication_node.at_xpath("hl7:statusCode", ns)&.[]("code")),
+      code: {
+        code: medication_node.at_xpath("hl7:code", ns)&.[]("code"),
+        code_system: medication_node.at_xpath("hl7:code", ns)&.[]("codeSystem"),
+        code_system_name: medication_node.at_xpath("hl7:code", ns)&.[]("codeSystemName")
+      }
+    }
+  end
+
   private
 
   def extract_patient_id
@@ -75,7 +91,6 @@ class QrdaParser
   end
 
   def extract_encounter_status_code(status_code)
-    puts "Encounter status code: #{status_code}"
     if status_code == "completed"
       "finished"
     elsif status_code == "in-progress"

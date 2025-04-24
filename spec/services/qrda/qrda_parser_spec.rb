@@ -1,4 +1,5 @@
 require 'rails_helper'
+require_relative "../../../app/services/qrda/qrda_parser"
 
 RSpec.describe QrdaParser, type: :service do
   let(:xml_file) { File.read(Rails.root.join('spec/fixtures/qrda_sample.xml')) }

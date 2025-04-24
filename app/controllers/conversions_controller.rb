@@ -1,4 +1,7 @@
 require "zip"
+require_relative "../services/qrda/qrda_parser"
+require_relative "../services/fhir/fhir_bundle_builder"
+require_relative "../constants/fhir_constants"
 
 class ConversionsController < ApplicationController
   def create
@@ -28,12 +31,12 @@ class ConversionsController < ApplicationController
     # Extract patient and encounter data
     patient_data = parser.extract_patient
     encounter_data = parser.extract_encounter
+    medication_data = parser.extract_medication
 
     # Build FHIR resources
     patient = FhirBundleBuilder.build_patient(patient_data)
     encounter = encounter_data ? FhirBundleBuilder.build_encounter(encounter_data, patient.id) : nil
-    medication = FhirBundleBuilder.build_medication(patient_data[:id])
-
+    medication = medication_data ? FhirBundleBuilder.build_medication(medication_data, patient.id) : nil
     # Write the output files
     write_output_files(entry, patient, encounter, medication)
   end
