@@ -13,8 +13,6 @@ This Ruby-based tool parses QRDA Category I XML files and converts them into FHI
   - `Encounter`
   - `MedicationAdministration`
 - Outputs three separate FHIR JSON files per input XML
-- Supports local ZIP uploads and AWS S3 input/output
-- Compatible with AWS Lambda (writes to `/tmp`, S3 optional)
 
 ---
 
