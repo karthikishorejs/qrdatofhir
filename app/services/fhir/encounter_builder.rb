@@ -17,7 +17,10 @@ class EncounterBuilder
       period: build_encounter_period(encounter_data[:low_time], encounter_data[:high_time]),
       meta: { profile: [ FHIRConstants::QICORE_ENCOUNTER_PROFILE ] },
       type: build_encounter_type(encounter_data[:code]),
-      class: map_encounter_class(encounter_data[:code][:code]) || nil
+      class: map_encounter_class(encounter_data[:code][:code]) || nil,
+      hospitalization: FHIR::Encounter::Hospitalization.new(
+        dischargeDisposition: build_discharge_disposition(encounter_data[:discharge_disposition])
+      )
     )
   end
 
@@ -59,5 +62,22 @@ class EncounterBuilder
 
   def self.parse_time(time)
     time ? Time.strptime(time, "%Y%m%d%H%M%S").strftime("%Y-%m-%dT%H:%M:%S.%L+00:00") : nil
+  end
+
+  def self.build_discharge_disposition(discharge_disposition)
+    return nil unless discharge_disposition
+
+    mapping = FHIRConstants::DISCHARGE_DISPOSITION_MAPPINGS[discharge_disposition[:code]]
+    return nil unless mapping
+
+    FHIR::CodeableConcept.new(
+      coding: [
+        FHIR::Coding.new(
+          code: mapping["code"],
+          display: mapping["display"],
+          system: mapping["system"]
+        )
+      ]
+    )
   end
 end

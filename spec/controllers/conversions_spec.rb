@@ -26,8 +26,8 @@ RSpec.describe "ConversionsController", type: :request do
     json_files = Dir.entries(first_dir).reject { |f| f.start_with?('.') }
     expect(json_files).not_to be_empty
     expect(json_files.size).to be >= 2 # At least one patient and one encounter file
-    puts(json_files)
     expect(json_files).to include(a_string_matching(/^patient_.*\.json$/))
     expect(json_files).to include(a_string_matching(/^encounter_.*\.json$/))
+    expect(json_files).to_not include(a_string_matching(/^medication_.*\.json$/))
   end
 end

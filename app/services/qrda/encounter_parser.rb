@@ -18,6 +18,9 @@ class EncounterParser
         code: encounter_node.at_xpath("hl7:code", ns)&.[]("code"),
         code_system: encounter_node.at_xpath("hl7:code", ns)&.[]("codeSystem"),
         code_system_name: encounter_node.at_xpath("hl7:code", ns)&.[]("codeSystemName")
+      },
+      hospitalization: {
+        discharge_disposition: extract_discharge_disposition(encounter_node, ns)
       }
     }
   end
@@ -36,5 +39,15 @@ class EncounterParser
     else
       "unknown"
     end
+  end
+
+  def self.extract_discharge_disposition(encounter_node, ns)
+    disposition_node = encounter_node.at_xpath("sdtc:dischargeDispositionCode", ns)
+    return nil unless disposition_node
+    {
+      code: disposition_node&.[]("code"),
+      code_system: disposition_node&.[]("codeSystem"),
+      code_system_name: disposition_node&.[]("codeSystemName")
+    }
   end
 end

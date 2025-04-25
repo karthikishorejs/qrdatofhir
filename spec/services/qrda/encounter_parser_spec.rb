@@ -5,7 +5,7 @@ RSpec.describe EncounterParser do
   let(:xml_file_path) { File.join(File.dirname(__FILE__), "../../fixtures/qrda_sample_encounter.xml") }
   let(:xml_content) { File.read(xml_file_path) }
   let(:doc) { Nokogiri::XML(xml_content) }
-  let(:ns) { { "hl7" => "urn:hl7-org:v3" } }
+  let(:ns) { { "hl7" => "urn:hl7-org:v3", "sdtc" => "urn:hl7-org:sdtc" } }
 
   describe ".extract_encounter" do
     it "extracts encounter information correctly" do
@@ -18,6 +18,9 @@ RSpec.describe EncounterParser do
       expect(encounter[:code][:code]).to eq("99213")
       expect(encounter[:code][:code_system]).to eq("2.16.840.1.113883.6.12")
       expect(encounter[:code][:code_system_name]).to eq("CPT")
+      expect(encounter[:hospitalization][:discharge_disposition][:code]).to eq("428371000124100")
+      expect(encounter[:hospitalization][:discharge_disposition][:code_system]).to eq("2.16.840.1.113883.6.96")
+      expect(encounter[:hospitalization][:discharge_disposition][:code_system_name]).to eq("SNOMEDCT")
     end
 
     it "returns nil if no encounter is found" do

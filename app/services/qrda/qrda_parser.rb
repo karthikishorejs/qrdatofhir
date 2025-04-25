@@ -11,7 +11,7 @@ class QrdaParser
 
   def initialize(file)
     @doc = Nokogiri::XML(file)
-    @ns = { "hl7" => "urn:hl7-org:v3" }
+    @ns = { "hl7" => "urn:hl7-org:v3", "sdtc" => "urn:hl7-org:sdtc" }
   end
 
   def extract_patient

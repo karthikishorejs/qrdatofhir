@@ -9,14 +9,18 @@ RSpec.describe EncounterBuilder do
         status_code: "finished",
         low_time: "20240101080000",
         high_time: "20240101100000",
-        code: { code: "32485007", code_system: "2.16.840.1.113883.6.96", code_system_name: "SNOMEDCT" }
+        code: { code: "32485007", code_system: "2.16.840.1.113883.6.96", code_system_name: "SNOMEDCT" },
+        discharge_disposition: {
+          code: "428371000124100",
+          code_system: "http://snomed.info/sct",
+          display: "Discharge to healthcare facility for hospice care (procedure)"
+        }
       }
     end
     let(:patient_id) { "patient-1" }
 
     it "builds a valid FHIR Encounter resource" do
       encounter = EncounterBuilder.build_encounter(encounter_data, patient_id)
-
       expect(encounter.id).to eq("encounter-1")
       expect(encounter.status).to eq("finished")
       expect(encounter.subject.reference).to eq("Patient/patient-1")
@@ -33,6 +37,12 @@ RSpec.describe EncounterBuilder do
       expect(type_coding.system).to eq(FHIRConstants::SNOMED_SYSTEM)
       expect(type_coding.code).to eq("32485007")
       expect(type_coding.display).to eq("SNOMEDCT")
+
+      # Validate dischargeDisposition
+      discharge_disposition = encounter.hospitalization.dischargeDisposition
+      expect(discharge_disposition.coding.first.system).to eq("http://terminology.hl7.org/CodeSystem/discharge-disposition")
+      expect(discharge_disposition.coding.first.code).to eq("home")
+      expect(discharge_disposition.coding.first.display).to eq("Home")
     end
   end
 end
