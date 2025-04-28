@@ -22,7 +22,17 @@ class PatientParser
   end
 
   def self.extract_gender(doc, ns)
-    doc.at_xpath("//hl7:administrativeGenderCode", ns)&.[]("code")&.downcase || "unknown"
+    gender_code = doc.at_xpath("//hl7:administrativeGenderCode", ns)&.[]("code")&.downcase || "unknown"
+    case gender_code
+    when "m"
+      "male"
+    when "f"
+      "female"
+    when "o"
+      "other"
+    else
+      "unknown"
+    end
   end
 
   def self.extract_name(doc, ns)

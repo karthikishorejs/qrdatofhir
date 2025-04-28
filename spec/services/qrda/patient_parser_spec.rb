@@ -14,7 +14,7 @@ RSpec.describe PatientParser, type: :service do
 
       expect(patient[:id]).to eq("12345")
       expect(patient[:birth_date]).to eq("19910302190000")
-      expect(patient[:gender]).to eq("f")
+      expect(patient[:gender]).to eq("female")
       expect(patient[:name][:given]).to eq("Age17InEDAge18DayOfIPAdmit")
       expect(patient[:name][:family]).to eq("DENOMPass")
       expect(patient[:race][:code]).to eq("1002-5")
@@ -43,7 +43,7 @@ RSpec.describe PatientParser, type: :service do
 
   describe ".extract_gender" do
     it "extracts the gender" do
-      expect(PatientParser.extract_gender(doc, ns)).to eq("f")
+      expect(PatientParser.extract_gender(doc, ns)).to eq("female")
     end
 
     it "returns 'unknown' if gender is not present" do

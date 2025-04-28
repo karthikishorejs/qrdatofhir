@@ -15,7 +15,7 @@ RSpec.describe QrdaParser, type: :service do
   end
 
   it "extracts gender" do
-    expect(patient_data[:gender]).to eq('f')
+    expect(patient_data[:gender]).to eq('female')
   end
 
   it "extracts name" do
