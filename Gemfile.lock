@@ -286,7 +286,7 @@ GEM
       rubocop-performance (>= 1.24)
       rubocop-rails (>= 2.30)
     ruby-progressbar (1.13.0)
-    rubyzip (2.4.1)
+    rubyzip (3.0.0)
     securerandom (0.4.1)
     simplecov (0.22.0)
       docile (~> 1.1)
@@ -350,7 +350,7 @@ DEPENDENCIES
   rails (~> 8.0.2)
   rspec-rails
   rubocop-rails-omakase
-  rubyzip (~> 2.3)
+  rubyzip (~> 3.0)
   simplecov
   thruster
   tzinfo-data
