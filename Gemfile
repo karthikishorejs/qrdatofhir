@@ -17,7 +17,7 @@ gem "nokogiri", ">= 1.13.5"
 # Fhir models
 gem "fhir_models", "~> 5.0.0"
 
-gem "rubyzip", "~> 2.3"
+gem "rubyzip", "~> 3.1"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # gem "bcrypt", "~> 3.1.7"
