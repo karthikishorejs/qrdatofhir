@@ -21,11 +21,13 @@ RSpec.describe EncounterBuilder do
 
     it "builds a valid FHIR Encounter resource" do
       encounter = EncounterBuilder.build_encounter(encounter_data, patient_id)
-      expect(encounter.id).to eq("encounter-1")
+      # Encounter ids are now derived as "<extension>-<encounter-code>" to avoid collisions
+      # when multiple encounters share the same extension.
+      expect(encounter.id).to eq("encounter-1-32485007")
       expect(encounter.status).to eq("finished")
       expect(encounter.subject.reference).to eq("Patient/patient-1")
-      expect(encounter.period.start).to eq("2024-01-01T08:00:00.000+00:00")
-      expect(encounter.period.end).to eq("2024-01-01T10:00:00.000+00:00")
+      expect(encounter.period.start).to eq("2024-01-01T14:00:00.000Z")
+      expect(encounter.period.end).to eq("2024-01-01T16:00:00.000Z")
       expect(encounter.meta.profile.first).to eq(FHIRConstants::QICORE_ENCOUNTER_PROFILE)
 
       encounter_class = encounter.to_hash['class']

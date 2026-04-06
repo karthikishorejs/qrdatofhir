@@ -22,13 +22,18 @@ class PatientParser
   end
 
   def self.extract_gender(doc, ns)
-    gender_code = doc.at_xpath("//hl7:administrativeGenderCode", ns)&.[]("code")&.downcase || "unknown"
+    node = doc.at_xpath("//hl7:administrativeGenderCode", ns)
+    code = node&.[]("code").to_s.strip
+
+    return "unknown" if code.empty?
+
+    gender_code = code.downcase
     case gender_code
-    when "m"
+    when "m", "male"
       "male"
-    when "f"
+    when "f", "female"
       "female"
-    when "o"
+    when "o", "other"
       "other"
     else
       "unknown"
@@ -37,7 +42,7 @@ class PatientParser
 
   def self.extract_name(doc, ns)
     {
-      given: doc.at_xpath("//hl7:patient/hl7:name/hl7:given", ns)&.text,
+      given: doc.xpath("//hl7:patient/hl7:name/hl7:given", ns).map(&:text).reject(&:empty?),
       family: doc.at_xpath("//hl7:patient/hl7:name/hl7:family", ns)&.text
     }
   end
@@ -53,7 +58,7 @@ class PatientParser
     node = doc.at_xpath(xpath, ns)
     {
       code: node&.[]("code"),
-      display: node&.[]("display"),
+      display: node&.[]("displayName") || node&.[]("display"),
       system: node&.[]("codeSystem")
     }
   end

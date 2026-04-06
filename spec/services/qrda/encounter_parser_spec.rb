@@ -18,9 +18,10 @@ RSpec.describe EncounterParser do
       expect(encounter[:code][:code]).to eq("99213")
       expect(encounter[:code][:code_system]).to eq("2.16.840.1.113883.6.12")
       expect(encounter[:code][:code_system_name]).to eq("CPT")
-      expect(encounter[:hospitalization][:discharge_disposition][:code]).to eq("428371000124100")
-      expect(encounter[:hospitalization][:discharge_disposition][:code_system]).to eq("2.16.840.1.113883.6.96")
-      expect(encounter[:hospitalization][:discharge_disposition][:code_system_name]).to eq("SNOMEDCT")
+      # discharge_disposition is top-level in parser output
+      expect(encounter[:discharge_disposition][:code]).to eq("428371000124100")
+      expect(encounter[:discharge_disposition][:code_system]).to eq("2.16.840.1.113883.6.96")
+      expect(encounter[:discharge_disposition][:code_system_name]).to eq("SNOMEDCT")
     end
 
     it "returns nil if no encounter is found" do

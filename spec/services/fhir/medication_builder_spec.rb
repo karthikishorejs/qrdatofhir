@@ -17,8 +17,9 @@ RSpec.describe MedicationBuilder do
       expect(medication.id).not_to be_nil
       expect(medication.status).to eq("completed")
       expect(medication.subject.reference).to eq("Patient/patient-1")
-      expect(medication.effectivePeriod.start).to eq("2024-01-01T08:00:00.000+00:00")
-      expect(medication.effectivePeriod.end).to eq("2024-01-01T10:00:00.000+00:00")
+      # Builder normalizes QRDA times to UTC ISO8601 with Z suffix
+      expect(medication.effectivePeriod.start).to eq("2024-01-01T14:00:00.000Z")
+      expect(medication.effectivePeriod.end).to eq("2024-01-01T16:00:00.000Z")
       expect(medication.meta.profile.first).to eq(FHIRConstants::QICORE_MEDICATION_PROFILE)
 
       coding = medication.medicationCodeableConcept.coding.first

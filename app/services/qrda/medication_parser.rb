@@ -1,25 +1,21 @@
-require "securerandom"
-require_relative "./status_code_helper"
+require_relative "./medication_active_parser"
+require_relative "./medication_administered_parser"
+require_relative "./medication_discharge_parser"
+require_relative "./medication_order_parser"
 
 # MedicationParser is responsible for extracting medication information from a QRDA document.
+#
+# This is now an orchestrator that delegates to specialized parsers per QRDA/QDM medication datatype.
 class MedicationParser
-  extend StatusCodeHelper
-
   def self.extract_medication(doc, ns)
-    medication_node = doc.at_xpath("//hl7:entry/hl7:substanceAdministration", ns)
-    return nil unless medication_node
+    # Backwards-compatible: return the first medication entry.
+    extract_medications(doc, ns).first
+  end
 
-    {
-    medication_id: medication_node.at_xpath("hl7:id", ns)&.[]("extension"),
-    low_time: medication_node.at_xpath("hl7:effectiveTime/hl7:low", ns)&.[]("value"),
-    high_time: medication_node.at_xpath("hl7:effectiveTime/hl7:high", ns)&.[]("value"),
-    status_code: extract_status_code(medication_node.at_xpath("hl7:statusCode", ns)&.[]("code")),
-    code: {
-        code: medication_node.at_xpath("hl7:consumable/hl7:manufacturedProduct/hl7:manufacturedMaterial/hl7:code", ns)&.[]("code"),
-        code_system: medication_node.at_xpath("hl7:consumable/hl7:manufacturedProduct/hl7:manufacturedMaterial/hl7:code", ns)&.[]("codeSystem"),
-        code_system_name: medication_node.at_xpath("hl7:consumable/hl7:manufacturedProduct/hl7:manufacturedMaterial/hl7:code", ns)&.[]("codeSystemName"),
-        display: medication_node.at_xpath("hl7:consumable/hl7:manufacturedProduct/hl7:manufacturedMaterial/hl7:code", ns)&.[]("displayName")
-      }
-    }
+  def self.extract_medications(doc, ns)
+    MedicationAdministeredParser.extract(doc, ns) +
+      MedicationDischargeParser.extract(doc, ns) +
+      MedicationOrderParser.extract(doc, ns) +
+      MedicationActiveParser.extract(doc, ns)
   end
 end

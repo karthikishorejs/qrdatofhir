@@ -34,8 +34,30 @@ RSpec.describe FhirBundleBuilder do
     let(:patient_id) { "patient-1" }
 
     it "delegates to MedicationBuilder.build_medication" do
-      expect(MedicationBuilder).to receive(:build_medication).with(medication_data, patient_id)
+      expect(MedicationBuilder).to receive(:build_medication).with(medication_data.merge(encounter_id: nil), patient_id)
       FhirBundleBuilder.build_medication(medication_data, patient_id)
+    end
+
+    it "routes order medications to MedicationRequestBuilder" do
+      data = medication_data.merge(kind: "order")
+      expect(MedicationRequestBuilder).to receive(:build_request).with(data, patient_id, encounter_id: nil)
+      FhirBundleBuilder.build_medication(data, patient_id)
+    end
+
+    it "routes active medications to MedicationStatementBuilder" do
+      data = medication_data.merge(kind: "active")
+      expect(MedicationStatementBuilder).to receive(:build_statement).with(data, patient_id, encounter_id: nil)
+      FhirBundleBuilder.build_medication(data, patient_id)
+    end
+
+    it "routes discharge medications to MedicationRequestBuilder with category=discharge" do
+      data = medication_data.merge(kind: "discharge")
+      expect(MedicationRequestBuilder).to receive(:build_request).with(
+        data.merge(category: "discharge"),
+        patient_id,
+        encounter_id: nil
+      )
+      FhirBundleBuilder.build_medication(data, patient_id)
     end
   end
 end

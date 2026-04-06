@@ -12,7 +12,8 @@ RSpec.describe MedicationParser do
     it "extracts medication information correctly" do
       medication = MedicationParser.extract_medication(doc, ns)
 
-      expect(medication[:medication_id]).to eq("med123")
+      # Medication ids are now suffixed to ensure uniqueness per event
+      expect(medication[:medication_id]).to start_with("med123")
       expect(medication[:code][:code]).to eq("123456")
       expect(medication[:code][:code_system]).to eq("2.16.840.1.113883.6.88")
       expect(medication[:code][:display]).to eq("Aspirin")

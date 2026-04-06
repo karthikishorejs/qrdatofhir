@@ -19,7 +19,7 @@ RSpec.describe QrdaParser, type: :service do
   end
 
   it "extracts name" do
-    expect(patient_data[:name][:given]).to eq('Age17InEDAge18DayOfIPAdmit')
+    expect(patient_data[:name][:given]).to eq(['Age17InEDAge18DayOfIPAdmit'])
     expect(patient_data[:name][:family]).to eq('DENOMPass')
   end
 

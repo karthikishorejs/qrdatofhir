@@ -2,21 +2,36 @@ module FHIRConstants
   QICORE_PATIENT_PROFILE = "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-patient"
   QICORE_ENCOUNTER_PROFILE = "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-encounter"
   QICORE_MEDICATION_PROFILE = "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-medicationadministration"
+  QICORE_MEDICATION_STATEMENT_PROFILE = "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-medicationstatement"
+  QICORE_MEDICATION_REQUEST_PROFILE = "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-medicationrequest"
+  QICORE_CONDITION_PROFILE = "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-condition"
+  QICORE_OBSERVATION_PROFILE = "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-observation"
+  QICORE_PROCEDURE_PROFILE = "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-procedure"
+  QICORE_SERVICE_REQUEST_PROFILE = "http://hl7.org/fhir/us/qicore/StructureDefinition/qicore-servicerequest"
   SNOMED_SYSTEM = "http://snomed.info/sct"
   LOINC_SYSTEM = "http://loinc.org"
   RXNORM_SYSTEM = "http://www.nlm.nih.gov/research/umls/rxnorm"
   US_CORE_RACE_URL = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-race"
   US_CORE_ETHNICITY_URL = "http://hl7.org/fhir/us/core/StructureDefinition/us-core-ethnicity"
   OMB_RACE_SYSTEM = "urn:oid:2.16.840.1.113883.6.238"
+  QRDA_POA_EXTENSION_URL = "urn:qrdatofhir:structuredefinition:present-on-admission".freeze
+  QRDA_ORDINALITY_RANK_EXTENSION_URL = "urn:qrdatofhir:structuredefinition:ordinality-rank".freeze
 
   DEFAULT_ENCOUNTER_STATUS = "unknown".freeze
   DEFAULT_MEDICATION_STATUS = "completed".freeze
   DEFAULT_MEDICATION_CODE = "unknown".freeze
 
   CODE_SYSTEM_MAPPINGS = {
+    # SNOMED CT OID
     "2.16.840.1.113883.6.96" => SNOMED_SYSTEM,
+    # LOINC OID
     "2.16.840.1.113883.6.1" => LOINC_SYSTEM,
-    "2.16.840.1.113883.6.88" => RXNORM_SYSTEM
+    # RxNorm OID
+    "2.16.840.1.113883.6.88" => RXNORM_SYSTEM,
+    # ICD-10-CM OID
+    "2.16.840.1.113883.6.90" => "http://hl7.org/fhir/sid/icd-10-cm",
+    # ICD-9-CM OID (commonly used in CDA/QRDA)
+    "2.16.840.1.113883.6.42" => "http://hl7.org/fhir/sid/icd-9-cm"
   }.freeze
 
   TYPE_SYSTEM_MAPPING = {
@@ -47,7 +62,7 @@ module FHIRConstants
     },
     "ICD10-CM" => {
       "CODE_SYSTEM" => "ICD10-CM",
-      "CODE_SYSTEM_DISPLAY" => "http://hl7.org/fhir/sid/icd-10",
+      "CODE_SYSTEM_DISPLAY" => "http://hl7.org/fhir/sid/icd-10-cm",
       "VALUE_SET" => "http://cts.nlm.nih.gov/fhir/ValueSet/"
     },
     "ICD9-CM" => {

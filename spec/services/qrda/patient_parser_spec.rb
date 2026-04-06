@@ -15,7 +15,7 @@ RSpec.describe PatientParser, type: :service do
       expect(patient[:id]).to eq("12345")
       expect(patient[:birth_date]).to eq("19910302190000")
       expect(patient[:gender]).to eq("female")
-      expect(patient[:name][:given]).to eq("Age17InEDAge18DayOfIPAdmit")
+      expect(patient[:name][:given]).to eq(["Age17InEDAge18DayOfIPAdmit"])
       expect(patient[:name][:family]).to eq("DENOMPass")
       expect(patient[:race][:code]).to eq("1002-5")
       expect(patient[:race][:system]).to eq("2.16.840.1.113883.6.238")
@@ -55,7 +55,7 @@ RSpec.describe PatientParser, type: :service do
   describe ".extract_name" do
     it "extracts the patient's name" do
       name = PatientParser.extract_name(doc, ns)
-      expect(name[:given]).to eq("Age17InEDAge18DayOfIPAdmit")
+      expect(name[:given]).to eq(["Age17InEDAge18DayOfIPAdmit"])
       expect(name[:family]).to eq("DENOMPass")
     end
   end

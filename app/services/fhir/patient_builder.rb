@@ -1,5 +1,6 @@
 require "fhir_models"
 require_relative "../../constants/fhir_constants"
+require_relative "./fhir_id_helper"
 
 # PatientBuilder is responsible for building FHIR Patient resources.
 # It includes methods to build the patient resource with appropriate attributes and extensions.
@@ -7,7 +8,7 @@ require_relative "../../constants/fhir_constants"
 class PatientBuilder
   def self.build_patient(data)
     FHIR::Patient.new(
-      id: data[:id],
+      id: FhirIdHelper.fhir_id(data[:id]),
       active: true,
       gender: data[:gender],
       birthDate: format_birth_date(data[:birth_date]),
@@ -47,12 +48,51 @@ class PatientBuilder
   end
 
   def self.build_name(name)
-    { use: "usual", given: [ name[:given] ], family: name[:family] }
+    name ||= {}
+
+    given =
+      case name[:given]
+      when Array
+        name[:given].compact.map(&:to_s).reject(&:empty?)
+      when nil
+        []
+      else
+        [ name[:given].to_s ].reject(&:empty?)
+      end
+
+    { use: "usual", given: given, family: name[:family] }.compact
   end
 
   def self.format_birth_date(birth)
-    return unless birth
-    "#{birth[0..3]}-#{birth[4..5]}-#{birth[6..7]}"
+    return nil if birth.nil?
+
+    b = birth.to_s.strip
+    return nil if b.empty?
+
+    # QRDA birthTime often appears as:
+    # - YYYYMMDD
+    # - YYYYMM
+    # - YYYY
+    # but sometimes includes time (e.g. YYYYMMDDHHMM / YYYYMMDDHHMMSS).
+    #
+    # FHIR Patient.birthDate is a *date* (YYYY-MM-DD), not a datetime.
+    digits = b.gsub(/[^0-9]/, "")
+
+    # If we have at least YYYYMMDD, use that and ignore any trailing time.
+    if digits.length >= 8
+      d = digits[0, 8]
+      return "#{d[0..3]}-#{d[4..5]}-#{d[6..7]}"
+    end
+
+    case digits.length
+    when 6
+      "#{digits[0..3]}-#{digits[4..5]}"
+    when 4
+      digits
+    else
+      # Best-effort fallback (may still be invalid, but avoids raising).
+      b
+    end
   end
 
   def self.build_coding(system, code, display = nil)
