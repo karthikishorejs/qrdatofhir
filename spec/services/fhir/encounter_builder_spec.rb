@@ -3,6 +3,8 @@ require_relative "../../../app/services/fhir/encounter_builder"
 
 RSpec.describe EncounterBuilder do
   describe ".build_encounter" do
+    subject(:encounter) { EncounterBuilder.build_encounter(encounter_data, patient_id) }
+
     let(:encounter_data) do
       {
         encounter_id: "encounter-1",
@@ -18,31 +20,68 @@ RSpec.describe EncounterBuilder do
       }
     end
     let(:patient_id) { "patient-1" }
+    let(:encounter_class) { encounter.to_hash["class"] }
+    let(:type_coding) { encounter.type.first.coding.first }
+    let(:discharge_disposition_coding) { encounter.hospitalization.dischargeDisposition.coding.first }
 
-    it "builds a valid FHIR Encounter resource" do
-      encounter = EncounterBuilder.build_encounter(encounter_data, patient_id)
+    it "sets the encounter id" do
       expect(encounter.id).to eq("encounter-1")
+    end
+
+    it "sets the encounter status" do
       expect(encounter.status).to eq("finished")
+    end
+
+    it "references the patient" do
       expect(encounter.subject.reference).to eq("Patient/patient-1")
+    end
+
+    it "sets the period start time" do
       expect(encounter.period.start).to eq("2024-01-01T08:00:00.000+00:00")
+    end
+
+    it "sets the period end time" do
       expect(encounter.period.end).to eq("2024-01-01T10:00:00.000+00:00")
+    end
+
+    it "applies the qicore encounter profile" do
       expect(encounter.meta.profile.first).to eq(FHIRConstants::QICORE_ENCOUNTER_PROFILE)
+    end
 
-      encounter_class = encounter.to_hash['class']
-      expect(encounter_class['system']).to eq("http://terminology.hl7.org/CodeSystem/v3-ActCode")
-      expect(encounter_class['code']).to eq("IMP")
-      expect(encounter_class['display']).to eq("inpatient encounter")
+    it "sets the encounter class system" do
+      expect(encounter_class["system"]).to eq("http://terminology.hl7.org/CodeSystem/v3-ActCode")
+    end
 
-      type_coding = encounter.type.first.coding.first
+    it "sets the encounter class code" do
+      expect(encounter_class["code"]).to eq("IMP")
+    end
+
+    it "sets the encounter class display" do
+      expect(encounter_class["display"]).to eq("inpatient encounter")
+    end
+
+    it "sets the type coding system" do
       expect(type_coding.system).to eq(FHIRConstants::SNOMED_SYSTEM)
-      expect(type_coding.code).to eq("32485007")
-      expect(type_coding.display).to eq("SNOMEDCT")
+    end
 
-      # Validate dischargeDisposition
-      discharge_disposition = encounter.hospitalization.dischargeDisposition
-      expect(discharge_disposition.coding.first.system).to eq("http://terminology.hl7.org/CodeSystem/discharge-disposition")
-      expect(discharge_disposition.coding.first.code).to eq("home")
-      expect(discharge_disposition.coding.first.display).to eq("Home")
+    it "sets the type coding code" do
+      expect(type_coding.code).to eq("32485007")
+    end
+
+    it "sets the type coding display" do
+      expect(type_coding.display).to eq("SNOMEDCT")
+    end
+
+    it "maps the discharge disposition system" do
+      expect(discharge_disposition_coding.system).to eq("http://terminology.hl7.org/CodeSystem/discharge-disposition")
+    end
+
+    it "maps the discharge disposition code" do
+      expect(discharge_disposition_coding.code).to eq("home")
+    end
+
+    it "maps the discharge disposition display" do
+      expect(discharge_disposition_coding.display).to eq("Home")
     end
   end
 end

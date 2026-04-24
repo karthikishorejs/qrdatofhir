@@ -3,6 +3,8 @@ require_relative "../../../app/services/fhir/medication_builder"
 
 RSpec.describe MedicationBuilder do
   describe ".build_medication" do
+    subject(:medication) { MedicationBuilder.build_medication(medication_data, patient_id) }
+
     let(:medication_data) do
       {
         low_time: "20240101080000",
@@ -10,19 +12,37 @@ RSpec.describe MedicationBuilder do
       }
     end
     let(:patient_id) { "patient-1" }
+    let(:coding) { medication.medicationCodeableConcept.coding.first }
 
-    it "builds a valid FHIR MedicationAdministration resource" do
-      medication = MedicationBuilder.build_medication(medication_data, patient_id)
-
+    it "assigns an id" do
       expect(medication.id).not_to be_nil
-      expect(medication.status).to eq("completed")
-      expect(medication.subject.reference).to eq("Patient/patient-1")
-      expect(medication.effectivePeriod.start).to eq("2024-01-01T08:00:00.000+00:00")
-      expect(medication.effectivePeriod.end).to eq("2024-01-01T10:00:00.000+00:00")
-      expect(medication.meta.profile.first).to eq(FHIRConstants::QICORE_MEDICATION_PROFILE)
+    end
 
-      coding = medication.medicationCodeableConcept.coding.first
+    it "sets the medication status" do
+      expect(medication.status).to eq("completed")
+    end
+
+    it "references the patient" do
+      expect(medication.subject.reference).to eq("Patient/patient-1")
+    end
+
+    it "sets the effective period start" do
+      expect(medication.effectivePeriod.start).to eq("2024-01-01T08:00:00.000+00:00")
+    end
+
+    it "sets the effective period end" do
+      expect(medication.effectivePeriod.end).to eq("2024-01-01T10:00:00.000+00:00")
+    end
+
+    it "applies the qicore medication profile" do
+      expect(medication.meta.profile.first).to eq(FHIRConstants::QICORE_MEDICATION_PROFILE)
+    end
+
+    it "sets the medication coding system" do
       expect(coding.system).to eq(FHIRConstants::RXNORM_SYSTEM)
+    end
+
+    it "sets the medication coding code" do
       expect(coding.code).to eq(FHIRConstants::DEFAULT_MEDICATION_CODE)
     end
   end
