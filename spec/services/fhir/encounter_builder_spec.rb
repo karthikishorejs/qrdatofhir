@@ -42,9 +42,53 @@ RSpec.describe EncounterBuilder do
 
       # Validate dischargeDisposition
       discharge_disposition = encounter.hospitalization.dischargeDisposition
-      expect(discharge_disposition.coding.first.system).to eq("http://terminology.hl7.org/CodeSystem/discharge-disposition")
-      expect(discharge_disposition.coding.first.code).to eq("home")
-      expect(discharge_disposition.coding.first.display).to eq("Home")
+      source_coding = discharge_disposition.coding.find { |coding| coding.system == FHIRConstants::SNOMED_SYSTEM }
+      mapped_coding =
+        discharge_disposition.coding.find do |coding|
+          coding.system == "http://terminology.hl7.org/CodeSystem/discharge-disposition"
+        end
+
+      expect(source_coding.code).to eq("428371000124100")
+      expect(mapped_coding.code).to eq("hosp")
+      expect(mapped_coding.display).to eq("Hospice")
+    end
+
+    it "maps non-elective inpatient encounter value set hints to inpatient class" do
+      encounter =
+        EncounterBuilder.build_encounter(
+          encounter_data.merge(
+            code: { code: "183452005", code_system: "2.16.840.1.113883.6.96", code_system_name: "SNOMEDCT" },
+            valueset_hint: "424"
+          ),
+          patient_id
+        )
+
+      encounter_class = encounter.to_hash["class"]
+      expect(encounter_class["code"]).to eq("IMP")
+      expect(encounter_class["display"]).to eq("inpatient encounter")
+    end
+
+    it "emits diagnosis Conditions without creating circular Encounter diagnosis references" do
+      encounter =
+        EncounterBuilder.build_encounter(
+          encounter_data.merge(
+            diagnoses: [
+              {
+                diagnosis: {
+                  code: "I48.91",
+                  code_system: "2.16.840.1.113883.6.90",
+                  display: "Unspecified atrial fibrillation"
+                }
+              }
+            ]
+          ),
+          patient_id
+        )
+
+      condition = EncounterBuilder.last_conditions.first
+      expect(encounter.diagnosis).to be_blank
+      expect(condition).to be_present
+      expect(condition.encounter.reference).to eq("Encounter/encounter-1-32485007")
     end
   end
 end

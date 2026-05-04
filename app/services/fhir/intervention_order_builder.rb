@@ -13,7 +13,8 @@ require_relative "../../constants/fhir_constants"
 # - ServiceRequest.code: from QRDA act/code
 # - ServiceRequest.subject: Patient
 # - ServiceRequest.encounter: linked by controller using extension join logic
-# - ServiceRequest.occurrence[x]: from effectiveTime low/high/value
+# - ServiceRequest.authoredOn: from effectiveTime low/value
+# - ServiceRequest.occurrence[x]: retained from effectiveTime low/high/value
 # - negationInd: mapped to doNotPerform=true (common FHIR pattern for "not ordered/performed")
 class InterventionOrderBuilder
   def self.build_service_request(order_data, patient_id, encounter_id: nil)
@@ -24,12 +25,13 @@ class InterventionOrderBuilder
       subject: FHIR::Reference.new(reference: "Patient/#{patient_id}"),
       code: build_codeable_concept(order_data[:code]),
       doNotPerform: order_data[:negation_ind] ? true : nil,
+      authoredOn: nil,
       occurrenceDateTime: nil,
       occurrencePeriod: nil,
       meta: { profile: [ FHIRConstants::QICORE_SERVICE_REQUEST_PROFILE ] }
     )
 
-    apply_occurrence(sr, order_data[:effective_low], order_data[:effective_high])
+    apply_order_timing(sr, order_data[:effective_low], order_data[:effective_high])
     sr.encounter = FHIR::Reference.new(reference: "Encounter/#{encounter_id}") if encounter_id
 
     sr
@@ -66,9 +68,11 @@ class InterventionOrderBuilder
     FHIRConstants::CODE_SYSTEM_MAPPINGS[code_system] || code_system
   end
 
-  def self.apply_occurrence(sr, low, high)
+  def self.apply_order_timing(sr, low, high)
     start_t = parse_time(low)
     end_t = parse_time(high)
+
+    sr.authoredOn = start_t.iso8601(3) if start_t
 
     if start_t && end_t
       sr.occurrencePeriod = FHIR::Period.new(
@@ -104,5 +108,5 @@ class InterventionOrderBuilder
     nil
   end
 
-  private_class_method :map_status, :build_codeable_concept, :map_code_system, :apply_occurrence, :parse_time
+  private_class_method :map_status, :build_codeable_concept, :map_code_system, :apply_order_timing, :parse_time
 end

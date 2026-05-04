@@ -1,5 +1,6 @@
 require "fhir_models"
 require "securerandom"
+require "digest"
 require_relative "../../constants/fhir_constants"
 require_relative "./fhir_id_helper"
 
@@ -9,8 +10,8 @@ class ConditionBuilder
   def self.build_condition(diagnosis_data, patient_id, encounter_id: nil)
     patient_id = FhirIdHelper.fhir_id(patient_id)
     encounter_id = FhirIdHelper.fhir_id(encounter_id) if encounter_id
-    diagnosis_id = FhirIdHelper.fhir_id(diagnosis_data[:diagnosis_id]) || SecureRandom.uuid
     code = diagnosis_data[:diagnosis] || {}
+    diagnosis_id = build_condition_id(diagnosis_data, patient_id, encounter_id, code)
     coding_system = map_code_system(code[:code_system])
 
     condition = FHIR::Condition.new(
@@ -52,6 +53,25 @@ class ConditionBuilder
   end
 
   private
+
+  def self.build_condition_id(diagnosis_data, patient_id, encounter_id, code)
+    explicit_id = FhirIdHelper.fhir_id(diagnosis_data[:diagnosis_id])
+    return explicit_id if explicit_id
+    return SecureRandom.uuid if code[:code].to_s.strip.empty?
+
+    stable_parts = [
+      patient_id,
+      encounter_id,
+      code[:code_system],
+      code[:code],
+      diagnosis_data[:effective_low],
+      diagnosis_data[:effective_high]
+    ].compact.map(&:to_s)
+
+    return SecureRandom.uuid if stable_parts.empty?
+
+    FhirIdHelper.fhir_id("condition-#{Digest::SHA256.hexdigest(stable_parts.join("|"))[0, 24]}")
+  end
 
   def self.build_clinical_status
     FHIR::CodeableConcept.new(

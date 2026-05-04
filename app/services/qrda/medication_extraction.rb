@@ -1,4 +1,6 @@
 # frozen_string_literal: true
+require "digest"
+require "securerandom"
 #
 # MedicationExtraction centralizes QRDA medication-node selection and shared field extraction.
 #
@@ -51,5 +53,39 @@ module MedicationExtraction
 
   def self.encounter_group_extension(node, ns)
     node.at_xpath("hl7:id", ns)&.[]("extension")&.to_s&.strip
+  end
+
+  def self.medication_id(node, ns, low_time:, high_time:, code_node:)
+    base_id = encounter_group_extension(node, ns)
+    timestamp = first_present(low_time, high_time)
+    code = code_node&.[]("code")
+    source_root = node.at_xpath("hl7:id", ns)&.[]("root")
+    seed_parts = [ timestamp, code, code_node&.[]("codeSystem"), source_root ].filter_map do |part|
+      value = part.to_s.strip
+      value unless value.empty?
+    end
+
+    suffix =
+      if seed_parts.empty?
+        SecureRandom.hex(8)
+      else
+        readable_parts = [ timestamp, code ].filter_map do |part|
+          value = part.to_s.strip
+          value unless value.empty?
+        end
+        readable_parts << Digest::SHA256.hexdigest(seed_parts.join("|"))[0, 8]
+        readable_parts.join("-")
+      end
+
+    id = first_present(base_id) ? "#{base_id}-#{suffix}" : "medication-#{suffix}"
+    fhir_id(id)
+  end
+
+  def self.first_present(*values)
+    values.find { |value| !value.to_s.strip.empty? }
+  end
+
+  def self.fhir_id(raw)
+    raw.to_s.strip.tr("_", "-").gsub(/[^A-Za-z0-9\-\.]/, "-")[0, 64]
   end
 end

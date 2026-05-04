@@ -9,9 +9,7 @@ require "uri"
 class FhirUploader
   DEFAULT_HEADERS = {
     "Content-Type" => "application/fhir+json",
-    "Accept" => "application/fhir+json",
-    # Avoid the "Expect: 100-continue" behavior some servers/clients trigger.
-    "Expect" => ""
+    "Accept" => "application/fhir+json"
   }.freeze
 
   def initialize(base_url:)

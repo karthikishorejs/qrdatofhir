@@ -38,7 +38,7 @@ class EncounterBuilder
       location: build_locations(encounter_data[:facility_locations])
     )
 
-    attach_diagnoses(enc, encounter_data[:diagnoses], patient_id)
+    build_diagnosis_conditions(enc, encounter_data[:diagnoses], patient_id)
 
     enc
   end
@@ -90,7 +90,7 @@ class EncounterBuilder
     # Prefer valueset-hint from QRDA comments when present (per your guidance):
     # - 292 => EMER
     # - 307 => IMP
-    # - 424 => OBSENC
+    # - 424 => IMP (Non-elective inpatient encounter)
     case valueset_hint.to_s
     when "292"
       return FHIR::Coding.new(
@@ -106,8 +106,8 @@ class EncounterBuilder
       )
     when "424"
       return FHIR::Coding.new(
-        code: "OBSENC",
-        display: "observation encounter",
+        code: "IMP",
+        display: "inpatient encounter",
         system: "http://terminology.hl7.org/CodeSystem/v3-ActCode"
       )
     end
@@ -189,10 +189,8 @@ class EncounterBuilder
     end.compact
   end
 
-  def self.attach_diagnoses(encounter, diagnoses, patient_id)
+  def self.build_diagnosis_conditions(encounter, diagnoses, patient_id)
     return if diagnoses.nil? || diagnoses.empty?
-
-    encounter.diagnosis ||= []
 
     diagnoses.each do |d|
       condition = ConditionBuilder.build_condition(
@@ -202,28 +200,49 @@ class EncounterBuilder
       )
 
       @last_conditions << condition
-
-      encounter.diagnosis << ConditionBuilder.build_encounter_diagnosis_entry(
-        condition,
-        rank: d[:rank]
-      )
     end
   end
 
   def self.build_discharge_disposition(discharge_disposition)
     return nil unless discharge_disposition
 
-    mapping = FHIRConstants::DISCHARGE_DISPOSITION_MAPPINGS[discharge_disposition[:code]]
-    return nil unless mapping
+    codings = []
 
-    FHIR::CodeableConcept.new(
-      coding: [
+    source_coding = build_source_discharge_disposition_coding(discharge_disposition)
+    codings << source_coding if source_coding
+
+    mapping = FHIRConstants::DISCHARGE_DISPOSITION_MAPPINGS[discharge_disposition[:code]]
+    if mapping
+      mapped_coding =
         FHIR::Coding.new(
           code: mapping["code"],
           display: mapping["display"],
           system: mapping["system"]
         )
-      ]
+
+      duplicate_mapping = codings.any? do |coding|
+        coding.system == mapped_coding.system && coding.code == mapped_coding.code
+      end
+      codings << mapped_coding unless duplicate_mapping
+    end
+
+    return nil if codings.empty?
+
+    FHIR::CodeableConcept.new(
+      coding: codings
+    )
+  end
+
+  def self.build_source_discharge_disposition_coding(discharge_disposition)
+    code = discharge_disposition[:code].to_s.strip
+    system = map_code_system(discharge_disposition[:code_system])
+
+    return nil if code.empty? || system.to_s.strip.empty?
+
+    FHIR::Coding.new(
+      code: code,
+      display: discharge_disposition[:display] || discharge_disposition[:code_system_name],
+      system: system
     )
   end
 end

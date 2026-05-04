@@ -1,5 +1,6 @@
 require "zip"
 require "json"
+require "time"
 require_relative "../services/qrda/qrda_parser"
 require_relative "../services/fhir/fhir_bundle_builder"
 require_relative "../services/fhir/bundle_builder"
@@ -135,6 +136,8 @@ class ConversionsController < ApplicationController
       condition = ConditionBuilder.build_condition(
         {
           diagnosis_id: d[:diagnosis_id],
+          effective_low: d[:effective_low],
+          effective_high: d[:effective_high],
           diagnosis: d[:diagnosis],
           poa: d[:poa]
         },
@@ -206,9 +209,22 @@ class ConversionsController < ApplicationController
   end
 
   def extract_file(entry, dir)
-    extracted = File.join(dir, entry.name)
+    extracted = safe_extract_path(entry.name, dir)
+    FileUtils.mkdir_p(File.dirname(extracted))
     entry.extract(extracted)
     extracted
+  end
+
+  def safe_extract_path(entry_name, dir)
+    destination = File.expand_path(File.join(dir, entry_name))
+    root = File.expand_path(dir)
+    root_with_separator = "#{root}#{File::SEPARATOR}"
+
+    unless destination.start_with?(root_with_separator)
+      raise ArgumentError, "Unsafe zip entry path: #{entry_name}"
+    end
+
+    destination
   end
 
   def pick_encounter_id_for_medication(med_hash, encounter_results)
@@ -227,25 +243,45 @@ class ConversionsController < ApplicationController
     return nil if v.empty?
 
     # EncounterBuilder/Medication builders output ISO8601, QRDA provides YYYYMMDD... strings.
-    Time.parse(v).utc
+    parsed =
+      if v.match?(/^\d{14}[+-]\d{4}$/)
+        Time.strptime(v, "%Y%m%d%H%M%S%z")
+      elsif v.match?(/^\d{14}Z$/)
+        Time.strptime(v, "%Y%m%d%H%M%SZ")
+      elsif v.match?(/^\d{14}$/)
+        Time.strptime(v, "%Y%m%d%H%M%S").utc
+      elsif v.match?(/^\d{8}$/)
+        Time.strptime(v, "%Y%m%d").utc
+      else
+        Time.parse(v).utc
+      end
+
+    parsed.utc
   rescue StandardError
     nil
   end
 
   def pick_encounter_id_for_extension(extension, encounter_results, low: nil, high: nil)
     ext = extension.to_s.strip
-    return nil if ext.empty?
+    encounters = Array(encounter_results).map { |r| r[:encounter] }.compact
+    template_time = parse_time(low || high)
 
     candidates =
-      Array(encounter_results).map { |r| r[:encounter] }.compact.select do |enc|
-        enc.id.to_s.start_with?("#{ext}-") || enc.id.to_s == ext
+      if ext.empty?
+        encounters
+      else
+        encounters.select do |enc|
+          enc.id.to_s.start_with?("#{ext}-") || enc.id.to_s == ext
+        end
       end
+
+    candidates = encounters if candidates.empty? && template_time
+    return nil if candidates.empty?
 
     return candidates.first&.id if candidates.length <= 1
 
     # If multiple encounter segments share the same extension, choose the one whose period covers
     # the template timestamp (best-effort).
-    template_time = parse_time(low || high)
     return candidates.first&.id unless template_time
 
     candidates.each do |enc|
@@ -357,21 +393,31 @@ class ConversionsController < ApplicationController
     base_url = ENV.fetch("FHIR_BASE_URL", "http://127.0.0.1:8080/fhir")
     uploader = FhirUploader.new(base_url: base_url)
 
-    # Match the manual curl flow you shared:
-    # 1) PUT Patient
-    # 2) PUT discharge medication
-    # 3) PUT Encounter
     encounters = Array(encounter_results).map { |r| r[:encounter] }.compact
+    conditions = Array(encounter_results).flat_map { |r| Array(r[:conditions]) }.compact
+    medications = Array(medication_links).map { |ml| ml[:resource] }.compact
+    assessments = Array(assessment_links).map { |al| al[:resource] }.compact
+    intervention_orders = Array(intervention_order_links).map { |l| l[:resource] }.compact
+    intervention_performeds = Array(intervention_performed_links).map { |l| l[:resource] }.compact
+    procedure_performeds = Array(procedure_performed_links).map { |l| l[:resource] }.compact
+    standalone_diagnoses = Array(diagnosis_links).map { |l| l[:resource] }.compact
 
-    discharge_med_resources =
-      Array(medication_links).select { |ml| ml[:kind].to_s.strip == "discharge" }.map { |ml| ml[:resource] }.compact
-
-    # Upload only the first discharge med + first encounter (same as the example curl sequence),
-    # but still record all attempted uploads in the result JSON.
-    to_upload = []
-    to_upload << patient
-    to_upload << discharge_med_resources.first if discharge_med_resources.any?
-    to_upload << encounters.first if encounters.any?
+    # Upload everything we generated. Keep Patient first, then Encounter, then clinical resources.
+    # Some QRDA diagnosis mappings create circular Encounter <-> Condition references, so full
+    # referential ordering is not always possible outside a transaction bundle.
+    to_upload = unique_resources(
+      [
+        patient,
+        *encounters,
+        *conditions,
+        *standalone_diagnoses,
+        *medications,
+        *assessments,
+        *intervention_orders,
+        *intervention_performeds,
+        *procedure_performeds
+      ]
+    )
 
     upload_result = uploader.upload_resources(to_upload)
 
@@ -415,5 +461,17 @@ class ConversionsController < ApplicationController
       upload: upload_result,
       evaluate_measure: eval_result
     }
+  end
+
+  def unique_resources(resources)
+    seen = {}
+
+    Array(resources).compact.filter_map do |resource|
+      key = [ resource.resourceType, resource.id ].join("/")
+      next if seen[key]
+
+      seen[key] = true
+      resource
+    end
   end
 end

@@ -1,5 +1,4 @@
 # frozen_string_literal: true
-require "securerandom"
 require_relative "./status_code_helper"
 require_relative "./medication_extraction"
 
@@ -26,14 +25,19 @@ class MedicationAdministeredParser
       high_time = MedicationExtraction.effective_high(node, ns)
 
       base_id = MedicationExtraction.encounter_group_extension(node, ns)
-      suffix_source = (low_time.presence || high_time.presence || SecureRandom.hex(4)).to_s
-      suffix = suffix_source.gsub(/[^0-9A-Za-z]/, "")
-      medication_id = base_id.present? ? "#{base_id}-#{suffix}" : SecureRandom.uuid
+      medication_id =
+        MedicationExtraction.medication_id(
+          node,
+          ns,
+          low_time: low_time,
+          high_time: high_time,
+          code_node: code_node
+        )
 
       {
         kind: "administered",
         medication_id: medication_id,
-        encounter_id: base_id.presence,
+        encounter_id: MedicationExtraction.first_present(base_id),
         low_time: low_time,
         high_time: high_time,
         status_code: map_med_admin_status(MedicationExtraction.status_code(node, ns)),

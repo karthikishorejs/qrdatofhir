@@ -23,6 +23,7 @@ RSpec.describe InterventionOrderBuilder do
     expect(sr.subject.reference).to eq("Patient/pat1")
     expect(sr.encounter.reference).to eq("Encounter/enc1")
     expect(sr.code.coding.first.code).to eq("ABC")
+    expect(sr.authoredOn).to eq("2025-10-01T16:00:00.000Z")
     expect(sr.occurrenceDateTime).not_to be_nil
   end
 end

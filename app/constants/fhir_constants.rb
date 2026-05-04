@@ -82,8 +82,8 @@ module FHIRConstants
 
   DISCHARGE_DISPOSITION_MAPPINGS = {
     "428371000124100" => {
-      "code" => "home",
-      "display" => "Home",
+      "code" => "hosp",
+      "display" => "Hospice",
       "system" => "http://terminology.hl7.org/CodeSystem/discharge-disposition"
     },
     "428361000124107" => {

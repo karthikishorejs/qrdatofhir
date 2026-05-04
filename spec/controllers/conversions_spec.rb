@@ -52,4 +52,88 @@ RSpec.describe "ConversionsController", type: :request do
       json_files.any? { |f| f.match?(/^procedure_.*\.json$/) }
     ).to be(true).or be(false)
   end
+
+  describe "conversion helpers" do
+    subject(:controller) { ConversionsController.new }
+
+    it "rejects zip entries that would extract outside the temp directory" do
+      Dir.mktmpdir do |dir|
+        expect do
+          controller.send(:safe_extract_path, "../evil.xml", dir)
+        end.to raise_error(ArgumentError, /Unsafe zip entry path/)
+      end
+    end
+
+    it "matches an encounter by timestamp when no encounter extension is present" do
+      early_encounter =
+        instance_double(
+          "Encounter",
+          id: "episode-early",
+          period: instance_double("Period", start: "2025-01-01T00:00:00.000Z", end: "2025-01-02T00:00:00.000Z")
+        )
+      target_encounter =
+        instance_double(
+          "Encounter",
+          id: "episode-target",
+          period: instance_double("Period", start: "2025-02-01T00:00:00.000Z", end: "2025-02-02T00:00:00.000Z")
+        )
+
+      picked =
+        controller.send(
+          :pick_encounter_id_for_extension,
+          nil,
+          [ { encounter: early_encounter }, { encounter: target_encounter } ],
+          low: "20250201120000"
+        )
+
+      expect(picked).to eq("episode-target")
+    end
+
+    it "uploads all generated resources, not only the first encounter and discharge medication" do
+      patient = FHIR::Patient.new(id: "patient-1")
+      encounters = [
+        FHIR::Encounter.new(id: "encounter-1", status: "finished"),
+        FHIR::Encounter.new(id: "encounter-2", status: "finished")
+      ]
+      medications = [
+        { resource: FHIR::MedicationRequest.new(id: "med-1", status: "active", intent: "order"), kind: "discharge" },
+        { resource: FHIR::MedicationRequest.new(id: "med-2", status: "active", intent: "order"), kind: "discharge" }
+      ]
+      uploader = instance_double(FhirUploader)
+      evaluator = instance_double(FhirMeasureEvaluator)
+
+      allow(FhirUploader).to receive(:new).and_return(uploader)
+      allow(FhirMeasureEvaluator).to receive(:new).and_return(evaluator)
+      allow(uploader).to receive(:upload_resources) do |resources|
+        @uploaded_resource_ids = resources.map { |resource| "#{resource.resourceType}/#{resource.id}" }
+        { base_url: "http://example.test/fhir", results: [] }
+      end
+      allow(evaluator).to receive(:evaluate_measure).and_return({ status: 200 })
+
+      Dir.mktmpdir do |dir|
+        controller.send(
+          :upload_to_fhir_server,
+          output_dir: Pathname.new(dir),
+          patient: patient,
+          encounter_results: encounters.map { |encounter| { encounter: encounter, conditions: [] } },
+          medication_links: medications,
+          assessment_links: [],
+          intervention_order_links: [],
+          intervention_performed_links: [],
+          procedure_performed_links: [],
+          diagnosis_links: []
+        )
+      end
+
+      expect(@uploaded_resource_ids).to eq(
+        [
+          "Patient/patient-1",
+          "Encounter/encounter-1",
+          "Encounter/encounter-2",
+          "MedicationRequest/med-1",
+          "MedicationRequest/med-2"
+        ]
+      )
+    end
+  end
 end
