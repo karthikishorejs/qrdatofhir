@@ -8,24 +8,56 @@ RSpec.describe EncounterParser do
   let(:ns) { { "hl7" => "urn:hl7-org:v3", "sdtc" => "urn:hl7-org:sdtc" } }
 
   describe ".extract_encounter" do
-    it "extracts encounter information correctly" do
-      encounter = EncounterParser.extract_encounter(doc, ns)
+    subject(:encounter) { EncounterParser.extract_encounter(doc, ns) }
 
+    it "extracts the encounter id" do
       expect(encounter[:encounter_id]).to eq("encounter123")
+    end
+
+    it "extracts the low time" do
       expect(encounter[:low_time]).to eq("20250101")
+    end
+
+    it "extracts the high time" do
       expect(encounter[:high_time]).to eq("20250102")
+    end
+
+    it "extracts the status code" do
       expect(encounter[:status_code]).to eq("finished")
+    end
+
+    it "extracts the encounter code" do
       expect(encounter[:code][:code]).to eq("99213")
+    end
+
+    it "extracts the encounter code system" do
       expect(encounter[:code][:code_system]).to eq("2.16.840.1.113883.6.12")
+    end
+
+    it "extracts the encounter code system name" do
       expect(encounter[:code][:code_system_name]).to eq("CPT")
+    end
+
+    it "extracts the discharge disposition code" do
       expect(encounter[:hospitalization][:discharge_disposition][:code]).to eq("428371000124100")
+    end
+
+    it "extracts the discharge disposition code system" do
       expect(encounter[:hospitalization][:discharge_disposition][:code_system]).to eq("2.16.840.1.113883.6.96")
+    end
+
+    it "extracts the discharge disposition code system name" do
       expect(encounter[:hospitalization][:discharge_disposition][:code_system_name]).to eq("SNOMEDCT")
     end
 
-    it "returns nil if no encounter is found" do
-      doc.xpath("//hl7:entry/hl7:encounter", ns).remove
-      expect(EncounterParser.extract_encounter(doc, ns)).to be_nil
+    context "when no encounter is present" do
+      before do
+        doc.xpath("//hl7:entry/hl7:encounter", ns).remove
+      end
+
+      it "returns nil" do
+        expect(encounter).to be_nil
+      end
     end
   end
 

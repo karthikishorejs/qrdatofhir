@@ -1,33 +1,55 @@
 require 'rails_helper'
 
 RSpec.describe "ConversionsController", type: :request do
+  subject(:make_request) do
+    post "/convert", params: { file: Rack::Test::UploadedFile.new(zip_path, "application/zip") }
+  end
+
   let(:zip_path) { Rails.root.join("spec/fixtures/valid_qrda.zip") }
+  let(:output_root) { Rails.root.join("output") }
+  let(:output_dirs) { Dir.entries(output_root).reject { |file| file.start_with?(".") } }
+  let(:first_output_dir) { output_root.join(output_dirs.fetch(0)) }
+  let(:json_files) { Dir.entries(first_output_dir).reject { |file| file.start_with?(".") } }
 
   before do
-    FileUtils.mkdir_p(Rails.root.join("output"))
+    FileUtils.mkdir_p(output_root)
   end
 
   after do
-    FileUtils.rm_rf(Dir[Rails.root.join("output", "*")])
+    FileUtils.rm_rf(Dir[output_root.join("*")])
   end
 
-  it "accepts a QRDA zip upload and generates expected FHIR JSON files" do
-    post "/convert", params: { file: Rack::Test::UploadedFile.new(zip_path, "application/zip") }
+  context "after uploading a valid QRDA zip" do
+    before do
+      make_request
+    end
 
-    expect(response).to have_http_status(:success)
-    expect(JSON.parse(response.body)).to eq({ "status" => "success" })
+    it "returns a successful response" do
+      expect(response).to have_http_status(:success)
+    end
 
-    # Validate output folder
-    dirs = Dir.entries(Rails.root.join("output")).reject { |f| f.start_with?('.') }
-    expect(dirs).not_to be_empty
+    it "returns a success payload" do
+      expect(JSON.parse(response.body)).to eq("status" => "success")
+    end
 
-    # Validate presence of patient JSON
-    first_dir = Rails.root.join("output", dirs.first)
-    json_files = Dir.entries(first_dir).reject { |f| f.start_with?('.') }
-    expect(json_files).not_to be_empty
-    expect(json_files.size).to be >= 2 # At least one patient and one encounter file
-    expect(json_files).to include(a_string_matching(/^patient_.*\.json$/))
-    expect(json_files).to include(a_string_matching(/^encounter_.*\.json$/))
-    expect(json_files).to_not include(a_string_matching(/^medication_.*\.json$/))
+    it "creates an output directory" do
+      expect(output_dirs).not_to be_empty
+    end
+
+    it "creates json output files" do
+      expect(json_files).not_to be_empty
+    end
+
+    it "creates a patient json file" do
+      expect(json_files).to include(a_string_matching(/^patient_.*\.json$/))
+    end
+
+    it "creates an encounter json file" do
+      expect(json_files).to include(a_string_matching(/^encounter_.*\.json$/))
+    end
+
+    it "does not create a medication json file" do
+      expect(json_files).not_to include(a_string_matching(/^medication_.*\.json$/))
+    end
   end
 end
