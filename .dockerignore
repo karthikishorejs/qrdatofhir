@@ -20,6 +20,12 @@
 !/log/.keep
 !/tmp/.keep
 
+# Ignore generated runtime/test artifacts.
+/coverage
+/output/*
+/*.zip
+/*bundle*.json
+
 # Ignore pidfiles, but keep the directory.
 /tmp/pids/*
 !/tmp/pids/.keep
